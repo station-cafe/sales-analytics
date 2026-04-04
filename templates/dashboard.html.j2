@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Station — Sales Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --cream: #faf7f2;
+  --espresso: #2c1810;
+  --terracotta: #9b4a2c;
+  --warm-brown: #6b3a2a;
+  --sage: #7a8b6f;
+  --gold: #c4953a;
+  --slate: #4a5568;
+  --light-border: #e8e0d8;
+  --card-shadow: 0 2px 12px rgba(44,24,16,0.06);
+  --section-gap: 48px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  background: var(--cream);
+  color: var(--espresso);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Navigation ───────────────────────────────────────────────── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(250,247,242,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--light-border);
+  padding: 0 24px;
+}
+
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 12px 0;
+}
+.nav-inner::-webkit-scrollbar { display: none; }
+
+.nav-brand {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 18px;
+  white-space: nowrap;
+  margin-right: 16px;
+  color: var(--espresso);
+  text-decoration: none;
+}
+
+.nav a:not(.nav-brand) {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--warm-brown);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.nav a:not(.nav-brand):hover {
+  background: rgba(155,74,44,0.08);
+  color: var(--terracotta);
+}
+
+/* ── Layout ───────────────────────────────────────────────────── */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+section {
+  padding: var(--section-gap) 0;
+  border-bottom: 1px solid var(--light-border);
+}
+section:last-of-type { border-bottom: none; }
+
+/* ── Typography ───────────────────────────────────────────────── */
+h1, h2, h3 { font-family: 'Playfair Display', serif; }
+
+.page-header {
+  text-align: center;
+  padding: 56px 0 40px;
+}
+.page-header h1 {
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.page-header .subtitle {
+  font-size: 18px;
+  color: var(--warm-brown);
+}
+.page-header .meta {
+  font-size: 13px;
+  color: var(--slate);
+  margin-top: 12px;
+}
+
+.section-header {
+  margin-bottom: 24px;
+}
+.section-header h2 {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+.section-header .section-desc {
+  font-size: 15px;
+  color: var(--warm-brown);
+}
+
+h3 {
+  font-size: 20px;
+  margin-bottom: 12px;
+  margin-top: 24px;
+}
+
+/* ── KPI Cards ────────────────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.kpi-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--card-shadow);
+}
+.kpi-card .label {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--slate);
+  margin-bottom: 4px;
+}
+.kpi-card .value {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--terracotta);
+}
+.kpi-card .detail {
+  font-size: 13px;
+  color: var(--warm-brown);
+  margin-top: 4px;
+}
+
+/* ── Chart Cards ──────────────────────────────────────────────── */
+.chart-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--card-shadow);
+  margin-bottom: 24px;
+}
+.chart-card h3 {
+  font-size: 18px;
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: var(--espresso);
+}
+.chart-container {
+  width: 100%;
+  min-height: 300px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* ── Insight Boxes ────────────────────────────────────────────── */
+.insight-box {
+  background: white;
+  border-radius: 12px;
+  border-left: 4px solid var(--terracotta);
+  padding: 20px 24px;
+  margin: 20px 0;
+  box-shadow: var(--card-shadow);
+}
+.insight-box.positive { border-left-color: var(--sage); }
+.insight-box.caution { border-left-color: var(--gold); }
+
+.insight-box h4 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--espresso);
+}
+.insight-box p, .insight-box ul {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--warm-brown);
+}
+.insight-box ul { padding-left: 20px; }
+.insight-box li { margin-bottom: 4px; }
+
+/* ── Tables ───────────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.data-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--slate);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--light-border);
+}
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--light-border);
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Recommendation Cards ─────────────────────────────────────── */
+.rec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.rec-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--card-shadow);
+  border-top: 4px solid var(--terracotta);
+}
+.rec-card .rec-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--terracotta);
+  opacity: 0.3;
+  float: right;
+  margin-top: -8px;
+}
+.rec-card h4 {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.rec-card p {
+  font-size: 14px;
+  color: var(--warm-brown);
+  line-height: 1.7;
+}
+.rec-card .impact {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(155,74,44,0.08);
+  color: var(--terracotta);
+}
+
+/* ── Footer ───────────────────────────────────────────────────── */
+.footer {
+  text-align: center;
+  padding: 40px 0;
+  font-size: 13px;
+  color: var(--slate);
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page-header h1 { font-size: 32px; }
+  .page-header .subtitle { font-size: 16px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .kpi-card .value { font-size: 24px; }
+  .two-col { grid-template-columns: 1fr; }
+  .rec-grid { grid-template-columns: 1fr; }
+  .section-header h2 { font-size: 24px; }
+  section { padding: 32px 0; }
+  .nav-brand { font-size: 16px; }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Print ────────────────────────────────────────────────────── */
+@media print {
+  .nav { display: none; }
+  section { break-inside: avoid; padding: 24px 0; }
+  .chart-card, .kpi-card, .insight-box { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#top" class="nav-brand">The Station</a>
+    <a href="#summary">Summary</a>
+    <a href="#revenue">Revenue</a>
+    <a href="#time">Time Patterns</a>
+    <a href="#menu">Menu</a>
+    <a href="#weather">Weather</a>
+    <a href="#tips">Tips</a>
+    <a href="#staffing">Staffing</a>
+    <a href="#staff">Staff</a>
+    <a href="#whatif">What-If</a>
+    <a href="#local">Local Intel</a>
+    <a href="#recs">Recommendations</a>
+  </div>
+</nav>
+
+<div class="container" id="top">
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- HEADER -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="page-header">
+  <h1>The Station</h1>
+  <p class="subtitle">Sales Analytics Dashboard</p>
+  <p class="meta">{{ stats.date_range }} &middot; {{ generated_at }}</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- EXECUTIVE SUMMARY -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="summary">
+  <div class="section-header">
+    <h2>Executive Summary</h2>
+    <p class="section-desc">Key performance metrics since opening day</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">Total Revenue</div>
+      <div class="value">${{ "{:,.0f}".format(stats.total_revenue) }}</div>
+      <div class="detail">{{ stats.n_days }} days of operation</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Avg Daily Revenue</div>
+      <div class="value">${{ "{:,.0f}".format(stats.avg_daily_revenue) }}</div>
+      <div class="detail">{{ stats.avg_daily_orders }} orders/day</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Avg Order Value</div>
+      <div class="value">${{ "{:.2f}".format(stats.avg_order_value) }}</div>
+      <div class="detail">{{ stats.avg_items_per_order }} items/order</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Total Orders</div>
+      <div class="value">{{ "{:,}".format(stats.total_orders) }}</div>
+      <div class="detail">{{ "{:,}".format(stats.total_items_sold) }} items sold</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Best Day</div>
+      <div class="value">${{ "{:,.0f}".format(stats.best_day_revenue) }}</div>
+      <div class="detail">{{ stats.best_day_date }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Total Tips</div>
+      <div class="value">${{ "{:,.0f}".format(stats.total_tips) }}</div>
+      <div class="detail">{{ stats.tip_rate_pct }}% of revenue</div>
+    </div>
+    {% if stats.latest_weekly_growth is defined %}
+    <div class="kpi-card">
+      <div class="label">Latest Week Growth</div>
+      <div class="value">{{ "{:+.1f}".format(stats.latest_weekly_growth) }}%</div>
+      <div class="detail">Avg: {{ "{:+.1f}".format(stats.avg_weekly_growth) }}% week-over-week</div>
+    </div>
+    {% endif %}
+    <div class="kpi-card">
+      <div class="label">Top Item</div>
+      <div class="value" style="font-size: 20px;">{{ stats.top_item }}</div>
+      <div class="detail">${{ "{:,.0f}".format(stats.top_item_revenue) }} revenue</div>
+    </div>
+  </div>
+
+  {% if stats.periods is defined %}
+  <div class="insight-box caution">
+    <h4>Startup Context</h4>
+    <p>
+      <strong>The first {{ stats.periods.rampup_days }} days were a ramp-up period</strong> — the community
+      was still discovering The Station. Ramp-up averaged
+      <strong>${{ "{:,.0f}".format(stats.periods.rampup_avg_revenue) }}/day</strong>
+      ({{ stats.periods.rampup_avg_orders }} orders/day) vs. steady state at
+      <strong>${{ "{:,.0f}".format(stats.periods.steady_avg_revenue) }}/day</strong>
+      ({{ stats.periods.steady_avg_orders }} orders/day) —
+      a <strong>{{ "{:+.0f}".format(stats.periods.growth_from_rampup) }}% improvement</strong>.
+      {% if stats.periods.severe_weather_days > 0 %}
+      Additionally, <strong>{{ stats.periods.severe_weather_days }} severe weather days</strong>
+      impacted sales by ~{{ "{:.0f}".format(stats.periods.severe_impact_pct) }}%
+      (${{ "{:,.0f}".format(stats.periods.severe_avg_revenue) }}/day vs.
+      ${{ "{:,.0f}".format(stats.periods.normal_avg_revenue) }}/day on normal days).
+      {% endif %}
+      <em>Steady-state metrics below are more representative of ongoing performance than the all-time averages.</em>
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="insight-box positive">
+    <h4>State of the Station</h4>
+    <p>
+      In {{ stats.n_days }} days since opening, The Station has generated
+      <strong>${{ "{:,.0f}".format(stats.total_revenue) }}</strong> in revenue from
+      <strong>{{ "{:,}".format(stats.total_orders) }}</strong> orders.
+      {% if stats.avg_weekly_growth is defined and stats.avg_weekly_growth > 0 %}
+      Revenue is trending upward with an average weekly growth of {{ "{:+.1f}".format(stats.avg_weekly_growth) }}%.
+      {% endif %}
+      The busiest day is typically <strong>{{ stats.busiest_day }}</strong> and the
+      slowest is <strong>{{ stats.slowest_day }}</strong>.
+      {{ stats.card_pct }}% of transactions are card, {{ stats.cash_pct }}% cash.
+      The food attach rate is <strong>{{ stats.attach.attach_rate }}%</strong>
+      ({{ stats.attach.drink_plus_food }} of {{ stats.attach.drink_orders }} drink orders include food).
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- REVENUE TRENDS -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="revenue">
+  <div class="section-header">
+    <h2>Revenue Trends</h2>
+    <p class="section-desc">Daily, weekly, and day-of-week revenue patterns</p>
+  </div>
+
+  <div class="chart-card">
+    <h3>Daily Revenue</h3>
+    <div class="chart-container" id="chart-daily-revenue"></div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <h3>Revenue by Day of Week</h3>
+      <div class="chart-container" id="chart-dow-revenue"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Average Order Value Trend</h3>
+      <div class="chart-container" id="chart-aov-trend"></div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Week-over-Week Comparison</h3>
+    <div class="chart-container" id="chart-wow-growth"></div>
+  </div>
+
+  {% if tables.weekly_growth %}
+  <div class="chart-card">
+    <h3>Weekly Revenue Summary</h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Week</th>
+          <th class="num">Revenue</th>
+          <th class="num">Growth</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in tables.weekly_growth %}
+        <tr>
+          <td>{{ w.week }}</td>
+          <td class="num">${{ "{:,.0f}".format(w.revenue) }}</td>
+          <td class="num">
+            {% if w.growth_pct is not none %}
+              <span style="color: {% if w.growth_pct >= 0 %}var(--sage){% else %}#c0392b{% endif %}">
+                {{ "{:+.1f}".format(w.growth_pct) }}%
+              </span>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="insight-box">
+    <h4>Revenue Insights</h4>
+    <ul>
+      <li><strong>{{ stats.busiest_day }}</strong> is the strongest day — consider running promotions or specials on <strong>{{ stats.slowest_day }}</strong> to balance demand.</li>
+      <li>Best single day was <strong>{{ stats.best_day_date }}</strong> (${{ "{:,.0f}".format(stats.best_day_revenue) }}) — review what made that day exceptional (weather, event, promotion?).</li>
+      <li>The 7-day moving average smooths out daily noise — watch for the trendline direction, not individual day spikes.</li>
+      <li>Week-over-week overlay shows seasonal and growth patterns. Consistent upward movement across all days means genuine growth, not just one-off spikes.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TIME PATTERNS -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="time">
+  <div class="section-header">
+    <h2>Time-of-Day Patterns</h2>
+    <p class="section-desc">When customers come — and when they don't</p>
+  </div>
+
+  <div class="chart-card">
+    <h3>Orders by Hour &amp; Day (Heatmap)</h3>
+    <div class="chart-container" id="chart-hourly-heatmap"></div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <h3>Morning Rush Detail (6–10 AM)</h3>
+      <div class="chart-container" id="chart-morning-rush"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Order Size Distribution</h3>
+      <div class="chart-container" id="chart-order-size-dist"></div>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <h4>Time Pattern Insights</h4>
+    <ul>
+      <li>The heatmap reveals your true peak hours — the darkest cells are where you need the most staff and prep.</li>
+      <li>Morning rush chart shows 5-minute order clusters. Train departure annotations (dashed lines) help identify commuter patterns — if you see spikes right before departures, commuters are your morning base.</li>
+      <li>Dead zones (lightest cells) are opportunities: consider happy hours, afternoon specials, or social media pushes during slow periods.</li>
+      <li>Most orders contain {{ stats.avg_items_per_order }} items — multi-item combos or "add a pastry" prompts could lift this.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- MENU PERFORMANCE -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="menu">
+  <div class="section-header">
+    <h2>Menu Performance</h2>
+    <p class="section-desc">What sells, what doesn't, and what could sell better</p>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <h3>Top Items by Revenue</h3>
+      <div class="chart-container" id="chart-top-items-revenue"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Top Items by Quantity</h3>
+      <div class="chart-container" id="chart-top-items-qty"></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <h3>Category Revenue Mix</h3>
+      <div class="chart-container" id="chart-category-mix"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Category Trend (7-Day Avg)</h3>
+      <div class="chart-container" id="chart-category-trend"></div>
+    </div>
+  </div>
+
+  {% if tables.item_pairings %}
+  <div class="chart-card">
+    <h3>Frequently Purchased Together</h3>
+    <p style="font-size: 14px; color: var(--warm-brown); margin-bottom: 16px;">
+      Items most commonly appearing in the same order — natural combo candidates.
+    </p>
+    <table class="data-table">
+      <thead>
+        <tr><th>Item A</th><th>Item B</th><th class="num">Times Together</th></tr>
+      </thead>
+      <tbody>
+        {% for pair in tables.item_pairings[:10] %}
+        <tr>
+          <td>{{ pair.item_a }}</td>
+          <td>{{ pair.item_b }}</td>
+          <td class="num">{{ pair.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if tables.underperformers %}
+  <div class="chart-card">
+    <h3>Underperforming Items</h3>
+    <p style="font-size: 14px; color: var(--warm-brown); margin-bottom: 16px;">
+      Items ordered less than once per day — candidates for promotion, repositioning, or removal.
+    </p>
+    <table class="data-table">
+      <thead>
+        <tr><th>Item</th><th class="num">Orders/Day</th><th class="num">Total Revenue</th><th class="num">Total Orders</th></tr>
+      </thead>
+      <tbody>
+        {% for item in tables.underperformers[:10] %}
+        <tr>
+          <td>{{ item.item }}</td>
+          <td class="num">{{ item.orders_per_day }}</td>
+          <td class="num">${{ "{:,.0f}".format(item.total_revenue) }}</td>
+          <td class="num">{{ item.total_orders }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="insight-box">
+    <h4>Menu Insights</h4>
+    <ul>
+      <li><strong>Food attach rate: {{ stats.attach.attach_rate }}%</strong> — for every 100 drink orders, {{ stats.attach.drink_plus_food }} also buy food. Industry benchmarks for cafes are 30-40%. {% if stats.attach.attach_rate < 30 %}There's significant room to grow food sales through suggestive selling and combo deals.{% elif stats.attach.attach_rate < 40 %}You're in the healthy range — maintain with consistent upselling.{% else %}This is above industry average — your food program is working well.{% endif %}</li>
+      <li>Items that appear together frequently are natural combo candidates. Consider bundling the top pairs at a slight discount to increase perceived value and AOV.</li>
+      <li>Underperformers ordered less than 1x/day deserve attention: either promote them (signage, staff suggestion, social media) or replace them with something from the top sellers' category.</li>
+      <li>Watch the category trend chart — if a category is declining week over week, investigate freshness, variety, or seasonal relevance.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- WEATHER IMPACT -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="weather">
+  <div class="section-header">
+    <h2>Weather Impact</h2>
+    <p class="section-desc">How Tuxedo Park weather drives (or dampens) sales</p>
+  </div>
+
+  <div class="chart-card">
+    <h3>Temperature &amp; Precipitation vs. Revenue</h3>
+    <div class="chart-container" id="chart-weather-correlation"></div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">Rainy Day Avg Revenue</div>
+      <div class="value">${{ "{:,.0f}".format(stats.weather.avg_revenue_rainy) }}</div>
+      <div class="detail">{{ stats.weather.rainy_days }} rainy days</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Dry Day Avg Revenue</div>
+      <div class="value">${{ "{:,.0f}".format(stats.weather.avg_revenue_dry) }}</div>
+      <div class="detail">{{ stats.weather.dry_days }} dry days</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Rain Impact</div>
+      <div class="value">{{ "{:+.1f}".format(-stats.weather.rain_impact_pct) }}%</div>
+      <div class="detail">Revenue change on rainy days</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Temp–Revenue Correlation</div>
+      <div class="value">{{ "{:.2f}".format(stats.weather.temp_correlation) }}</div>
+      <div class="detail">{{ "Strong" if stats.weather.temp_correlation|abs > 0.5 else "Moderate" if stats.weather.temp_correlation|abs > 0.3 else "Weak" }} correlation</div>
+    </div>
+  </div>
+
+  <div class="insight-box caution">
+    <h4>Weather Strategy</h4>
+    <ul>
+      {% if stats.weather.rain_impact_pct > 10 %}
+      <li><strong>Rain costs you ~{{ "{:.0f}".format(stats.weather.rain_impact_pct) }}% of revenue.</strong> Consider rainy-day promotions ("Rain Day Latte" special, social media push when forecast shows rain) to mitigate the drop.</li>
+      {% else %}
+      <li>Weather has a modest impact on sales — your customer base is relatively weather-resilient, likely driven by commuters and locals who come regardless.</li>
+      {% endif %}
+      <li>As spring arrives and temperatures rise, expect increased foot traffic from hikers and trail visitors. Prepare grab-and-go options for the outdoor crowd.</li>
+      <li>Tuxedo is a gateway to Harriman State Park and the Appalachian Trail — peak hiking season (April–October) should bring a noticeable bump in weekend traffic.</li>
+      <li>Consider a "hot soup" or "warm drink" push on cold/rainy days, and iced drink promotions when temps break 70°F.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TIPS -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="tips">
+  <div class="section-header">
+    <h2>Tips Analysis</h2>
+    <p class="section-desc">Tipping patterns by time and payment type</p>
+  </div>
+
+  <div class="chart-card">
+    <h3>Average Tip &amp; Tip Rate by Hour</h3>
+    <div class="chart-container" id="chart-tips"></div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">Total Tips</div>
+      <div class="value">${{ "{:,.0f}".format(stats.total_tips) }}</div>
+      <div class="detail">{{ stats.tip_rate_pct }}% of revenue</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Avg Card Tip</div>
+      <div class="value">${{ "{:.2f}".format(stats.avg_tip_card) }}</div>
+      <div class="detail">Per card transaction</div>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <h4>Tips Insights</h4>
+    <ul>
+      <li>{{ stats.card_pct }}% of transactions are card — this is your primary tip channel. {% if stats.cash_pct > 30 %}The high cash ratio may mean missed tips. Consider a visible tip jar with suggested amounts.{% endif %}</li>
+      <li>Look at which hours have the highest tip rates — this may indicate when your most engaged (or generous) customers visit.</li>
+      <li>Industry average tip rate for quick-service cafes is 15-20%. {% if stats.tip_rate_pct < 15 %}You're below average — ensure tip prompts on the POS are prominent with suggested amounts (e.g., $1, $2, 20%).{% elif stats.tip_rate_pct > 20 %}You're above average — your customers appreciate the service!{% endif %}</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- STAFFING -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="staffing">
+  <div class="section-header">
+    <h2>Staffing Recommendations</h2>
+    <p class="section-desc">Data-driven staffing levels based on order volume</p>
+  </div>
+
+  <div class="chart-card">
+    <h3>Average Orders per Hour by Day</h3>
+    <p style="font-size: 14px; color: var(--warm-brown); margin-bottom: 16px;">
+      Darker = busier. Use this to plan staffing levels: 1-5 orders/hr = 1 person, 5-10 = 1-2, 10+ = 2+ staff.
+    </p>
+    <div class="chart-container" id="chart-staffing-model"></div>
+  </div>
+
+  {% if tables.staffing_recs %}
+  <div class="chart-card">
+    <h3>Recommended Staffing by Day</h3>
+    <table class="data-table">
+      <thead>
+        <tr><th>Day</th><th class="num">Peak Orders/Hr</th><th>Peak Hour</th><th>Staff Needed</th></tr>
+      </thead>
+      <tbody>
+        {% for rec in tables.staffing_recs %}
+        <tr>
+          <td>{{ rec.day }}</td>
+          <td class="num">{{ rec.peak_orders_per_hour }}</td>
+          <td>{{ rec.peak_hour }}</td>
+          <td><strong>{{ rec.recommendation }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="insight-box">
+    <h4>Staffing Insights</h4>
+    <ul>
+      <li>The heatmap shows average orders per hour — plan your shifts around the darkest bands. A single barista can handle ~8-10 orders/hour comfortably; beyond that, wait times increase and customer experience suffers.</li>
+      <li>Consider staggered shifts: full team for peak hours, single coverage during slow hours to control labor costs.</li>
+      <li>Morning prep (before opening) and closing cleanup don't generate revenue but need to be staffed — factor 30-60 min on each end.</li>
+      <li>As you grow, watch for the "tipping point" where consistent 10+ orders/hour means you structurally need a second person, not just during spikes.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- STAFF CORRELATION -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="staff">
+  <div class="section-header">
+    <h2>Staff &amp; Volume Correlation</h2>
+    <p class="section-desc">How staffing levels correlate with sales volume — not who sold what, but what happens when different team configurations are on duty</p>
+  </div>
+
+  {% if stats.staffing_corr is defined and stats.staffing_corr %}
+  <div class="kpi-grid">
+    {% if stats.staffing_corr.revenue_per_labor_hour is defined %}
+    <div class="kpi-card">
+      <div class="label">Revenue per Labor Hour</div>
+      <div class="value">${{ "{:,.0f}".format(stats.staffing_corr.revenue_per_labor_hour) }}</div>
+      <div class="detail">Across all tracked shifts</div>
+    </div>
+    {% endif %}
+    {% if stats.staffing_corr.avg_staff_per_day is defined %}
+    <div class="kpi-card">
+      <div class="label">Avg Staff per Day</div>
+      <div class="value">{{ "{:.1f}".format(stats.staffing_corr.avg_staff_per_day) }}</div>
+      <div class="detail">Unique staff clocking in</div>
+    </div>
+    {% endif %}
+    {% if stats.staffing_corr.staff_count_vs_revenue is defined %}
+    <div class="kpi-card">
+      <div class="label">Staff Count ↔ Revenue</div>
+      <div class="value">{{ "{:.2f}".format(stats.staffing_corr.staff_count_vs_revenue) }}</div>
+      <div class="detail">Correlation coefficient</div>
+    </div>
+    {% endif %}
+    {% if stats.staffing_corr.labor_hours_vs_revenue is defined %}
+    <div class="kpi-card">
+      <div class="label">Labor Hours ↔ Revenue</div>
+      <div class="value">{{ "{:.2f}".format(stats.staffing_corr.labor_hours_vs_revenue) }}</div>
+      <div class="detail">Correlation coefficient</div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="chart-card" id="chart-staff-volume-wrapper">
+    <h3>Staff Count vs Revenue &amp; Revenue per Labor Hour</h3>
+    <div class="chart-container" id="chart-staff-volume-correlation"></div>
+  </div>
+
+  <div class="chart-card" id="chart-staff-timeline-wrapper">
+    <h3>Recent Shift Coverage (Last 14 Days)</h3>
+    <p style="font-size: 14px; color: var(--warm-brown); margin-bottom: 16px;">
+      Who was working when — compare with the hourly sales heatmap above to spot staffing gaps.
+    </p>
+    <div class="chart-container" id="chart-staff-shifts-timeline"></div>
+  </div>
+
+  {% if tables.staff_metrics is defined and tables.staff_metrics %}
+  <div class="chart-card">
+    <h3>Staff Correlation Summary</h3>
+    <p style="font-size: 14px; color: var(--warm-brown); margin-bottom: 16px;">
+      Average daily revenue and order volume on days each team member was on duty.
+      <strong>This is correlative, not attributional</strong> — it reflects what the business looks like
+      when a given person is scheduled, which includes day-of-week effects, weather, and other factors.
+    </p>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Staff</th>
+          <th>Role</th>
+          <th class="num">Shifts</th>
+          <th class="num">Total Hours</th>
+          <th class="num">Avg Hrs/Shift</th>
+          <th class="num">Avg Daily Rev (on duty)</th>
+          <th class="num">Avg Daily Orders</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in tables.staff_metrics %}
+        <tr>
+          <td><strong>{{ m.name }}</strong></td>
+          <td>{{ m.job_title }}</td>
+          <td class="num">{{ m.shifts_worked }}</td>
+          <td class="num">{{ m.total_hours }}</td>
+          <td class="num">{{ m.avg_hours_per_shift }}</td>
+          <td class="num">${{ "{:,.0f}".format(m.avg_daily_revenue_on_duty) }}</td>
+          <td class="num">{{ m.avg_daily_orders_on_duty }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="insight-box">
+    <h4>Staff Correlation Insights</h4>
+    <ul>
+      <li><strong>This is correlation, not causation.</strong> A staff member may have higher average daily revenue simply because they work the busiest days (e.g., weekends). Use this data to understand patterns, not to evaluate individual performance.</li>
+      {% if stats.staffing_corr is defined and stats.staffing_corr.revenue_per_labor_hour is defined %}
+      <li><strong>Revenue per labor hour (${{ "{:,.0f}".format(stats.staffing_corr.revenue_per_labor_hour) }})</strong> is a key efficiency metric. Industry benchmarks for cafes are $30-50/labor hour. {% if stats.staffing_corr.revenue_per_labor_hour < 30 %}You're below the benchmark — look for overstaffing during slow periods.{% elif stats.staffing_corr.revenue_per_labor_hour > 50 %}You're above the benchmark — staff may be stretched thin during peaks.{% else %}You're in the healthy range.{% endif %}</li>
+      {% endif %}
+      <li>Compare the shift timeline with the hourly heatmap — are you staffed when you're busiest? Look for gaps where high order volume coincides with low staffing.</li>
+      <li>As all payments currently go through a single POS login, individual sales attribution isn't available. If individual tracking is desired, set up separate team member logins on the Square terminal.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- WHAT-IF ANALYSIS -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="whatif">
+  <div class="section-header">
+    <h2>What-If Scenarios</h2>
+    <p class="section-desc">Projected impact of potential changes</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">Extended Hours (+1 hr)</div>
+      <div class="value">${{ "{:,.0f}".format(stats.what_if.afternoon_rev_per_hour * 30) }}</div>
+      <div class="detail">Est. additional monthly revenue at ${{ "{:.0f}".format(stats.what_if.afternoon_rev_per_hour) }}/hr</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Loyalty Program (Low Est.)</div>
+      <div class="value">+${{ "{:,.0f}".format(stats.what_if.loyalty_lift_low * 30) }}/mo</div>
+      <div class="detail">15% lift on avg daily revenue</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Loyalty Program (High Est.)</div>
+      <div class="value">+${{ "{:,.0f}".format(stats.what_if.loyalty_lift_high * 30) }}/mo</div>
+      <div class="detail">25% lift — industry benchmarks</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">+10% AOV via Combos</div>
+      <div class="value">+${{ "{:,.0f}".format(stats.avg_daily_revenue * 0.10 * 30) }}/mo</div>
+      <div class="detail">Combo pricing & suggestive selling</div>
+    </div>
+  </div>
+
+  <div class="insight-box caution">
+    <h4>Scenario Analysis Notes</h4>
+    <ul>
+      <li><strong>Extended hours:</strong> Based on your current late-afternoon revenue rate of ~${{ "{:.0f}".format(stats.what_if.afternoon_rev_per_hour) }}/hr. Before extending, verify labor cost doesn't exceed revenue. At minimum wage + benefits, you need ~$25-30/hr in sales to break even on an extra staff hour.</li>
+      <li><strong>Loyalty program:</strong> Square Loyalty is built into your POS — setup is straightforward. Industry data shows 15-25% revenue lift for cafes. Start simple: points per dollar, free drink at X points. The key benefit isn't just repeat visits — it's data on customer frequency and preferences.</li>
+      <li><strong>Combo pricing:</strong> Your item pairing data shows natural bundles. A "Coffee + Pastry" combo at $1 off could lift AOV while increasing food attach rate. Test with top-selling pairs first.</li>
+      <li><strong>Current operating window:</strong> First orders typically at {{ stats.what_if.first_order_hour }}:00, last around {{ stats.what_if.last_order_hour }}:00.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- LOCAL CONTEXT -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="local">
+  <div class="section-header">
+    <h2>Local Intelligence</h2>
+    <p class="section-desc">Tuxedo Park context that shapes your business</p>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <h3>Tuxedo Park Market Context</h3>
+      <ul style="font-size: 14px; line-height: 2; color: var(--warm-brown); padding-left: 16px;">
+        <li><strong>Population:</strong> ~3,500 (village + surrounding area)</li>
+        <li><strong>Key traffic drivers:</strong> NJ Transit commuters, Harriman/Sterling Forest hikers, Appalachian Trail thru-hikers, Tuxedo Park gated community residents</li>
+        <li><strong>NJ Transit:</strong> Port Jervis Line — ~5-6 AM departures, returns 5-7 PM</li>
+        <li><strong>Competition:</strong> Limited local cafe options — The Station has strong positioning as the primary specialty coffee destination</li>
+        <li><strong>Tourist season:</strong> April–October for hiking; fall foliage (Oct) is peak</li>
+        <li><strong>NY Sales Tax:</strong> 8.125% (Orange County)</li>
+      </ul>
+    </div>
+    <div class="chart-card">
+      <h3>Seasonal Calendar</h3>
+      <ul style="font-size: 14px; line-height: 2; color: var(--warm-brown); padding-left: 16px;">
+        <li><strong>Mar–Apr:</strong> Spring hiking begins, trail opens up, increasing weekend foot traffic</li>
+        <li><strong>May:</strong> Memorial Day weekend — first big tourism spike</li>
+        <li><strong>Jun–Aug:</strong> Peak summer, consistent hiker traffic, day-trippers from NYC/NJ</li>
+        <li><strong>Sep–Oct:</strong> Fall foliage season — highest tourism volume, Oktoberfest events</li>
+        <li><strong>Nov–Dec:</strong> Holiday season, reduced hiking, but local + commuter base stays</li>
+        <li><strong>Jan–Feb:</strong> Lowest traffic — focus on regulars, warm drinks, loyalty</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="insight-box positive">
+    <h4>Local Opportunities</h4>
+    <ul>
+      <li><strong>Commuter lock-in:</strong> If morning spikes align with NJ Transit departures, these are your most reliable customers. A mobile pre-order option (even a simple text-to-order) could reduce wait time and increase capture rate.</li>
+      <li><strong>Hiker market:</strong> April–October brings trail traffic. Grab-and-go trail snacks, electrolyte drinks, and a "hiker special" could capture this segment. Consider a water bottle fill station as a goodwill gesture that drives foot traffic.</li>
+      <li><strong>Weekend events:</strong> Partner with local hiking groups, trail races, or Tuxedo Park community events for catering or pop-up specials.</li>
+      <li><strong>Seasonal menu:</strong> Rotate specials with the seasons — iced drinks for summer hikers, pumpkin spice for fall foliage, peppermint for holidays. Your Signature Sips category is the natural home for these.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TOP RECOMMENDATIONS -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<section id="recs">
+  <div class="section-header">
+    <h2>Top Recommendations</h2>
+    <p class="section-desc">Prioritized actions to grow revenue and optimize operations</p>
+  </div>
+
+  <div class="rec-grid">
+    <div class="rec-card">
+      <span class="rec-num">1</span>
+      <h4>Launch a Simple Loyalty Program</h4>
+      <p>Square Loyalty is already in your POS. Set up a points-per-dollar program with a free drink reward. Industry data shows 15-25% revenue lift for cafes. It also gives you data on visit frequency to identify your VIPs.</p>
+      <span class="impact">Est. +${{ "{:,.0f}".format(stats.what_if.loyalty_lift_low * 30) }}–{{ "{:,.0f}".format(stats.what_if.loyalty_lift_high * 30) }}/mo</span>
+    </div>
+
+    <div class="rec-card">
+      <span class="rec-num">2</span>
+      <h4>Introduce "Coffee + Pastry" Combos</h4>
+      <p>Your item pairing data shows natural bundles. A combo at $1 off drives food attach rate (currently {{ stats.attach.attach_rate }}%). Use table tents, menu board callouts, and staff suggestive selling.</p>
+      <span class="impact">Est. +10% AOV</span>
+    </div>
+
+    <div class="rec-card">
+      <span class="rec-num">3</span>
+      <h4>{{ stats.slowest_day }} Promotion</h4>
+      <p>{{ stats.slowest_day }} is consistently your weakest day. Run a weekly special — "{{ stats.slowest_day }} Mocha Madness" or a BOGO pastry — to level out the weekly revenue curve. Promote via Instagram and a sidewalk sign.</p>
+      <span class="impact">Even a 20% lift = +${{ "{:,.0f}".format(stats.avg_daily_revenue * 0.2 * 4) }}/mo</span>
+    </div>
+
+    <div class="rec-card">
+      <span class="rec-num">4</span>
+      <h4>Prep for Hiking Season</h4>
+      <p>April–October brings hikers to Tuxedo. Stock grab-and-go trail snacks, iced drinks, and consider a "Hiker's Pack" (coffee + snack + water). Add signage visible from the trail/station area.</p>
+      <span class="impact">New customer segment capture</span>
+    </div>
+
+    <div class="rec-card">
+      <span class="rec-num">5</span>
+      <h4>Optimize Staffing to Volume</h4>
+      <p>Use the staffing heatmap above to align shifts with actual demand. Over-staffing slow hours costs ~$15-20/hr; under-staffing peak hours costs sales and customer experience. Stagger shifts around your peaks.</p>
+      <span class="impact">Labor cost optimization</span>
+    </div>
+  </div>
+</section>
+
+</div><!-- /.container -->
+
+<!-- Footer -->
+<div class="footer">
+  <p>The Station Sales Analytics &middot; Generated {{ generated_at }}</p>
+  <p style="margin-top: 4px;">Data source: Square POS &middot; Weather: Open-Meteo</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- PLOTLY CHART RENDERING -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<script>
+const A = {{ analysis }};
+const plotConfig = { responsive: true, displayModeBar: false };
+
+function renderChart(id, chartKey) {
+  const chart = A.charts[chartKey];
+  if (!chart) return;
+  Plotly.newPlot(id, chart.data, chart.layout, plotConfig);
+}
+
+// Render all charts
+renderChart('chart-daily-revenue', 'daily_revenue');
+renderChart('chart-dow-revenue', 'dow_revenue');
+renderChart('chart-aov-trend', 'aov_trend');
+renderChart('chart-wow-growth', 'wow_growth');
+renderChart('chart-hourly-heatmap', 'hourly_heatmap');
+renderChart('chart-morning-rush', 'morning_rush');
+renderChart('chart-order-size-dist', 'order_size_dist');
+renderChart('chart-top-items-revenue', 'top_items_revenue');
+renderChart('chart-top-items-qty', 'top_items_qty');
+renderChart('chart-category-mix', 'category_mix');
+renderChart('chart-category-trend', 'category_trend');
+renderChart('chart-weather-correlation', 'weather_correlation');
+renderChart('chart-tips', 'tips');
+renderChart('chart-staffing-model', 'staffing_model');
+renderChart('chart-staff-volume-correlation', 'staff_volume_correlation');
+renderChart('chart-staff-shifts-timeline', 'staff_shifts_timeline');
+
+// Hide chart wrappers if no data
+if (!A.charts['staff_volume_correlation']) {
+  const el = document.getElementById('chart-staff-volume-wrapper');
+  if (el) el.style.display = 'none';
+}
+if (!A.charts['staff_shifts_timeline']) {
+  const el = document.getElementById('chart-staff-timeline-wrapper');
+  if (el) el.style.display = 'none';
+}
+
+// Handle window resize for all charts
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.chart-container').forEach(el => {
+    if (el.data) Plotly.Plots.resize(el);
+  });
+});
+
+// Smooth scroll for nav links
+document.querySelectorAll('.nav a').forEach(link => {
+  link.addEventListener('click', (e) => {
+    const href = link.getAttribute('href');
+    if (href.startsWith('#')) {
+      e.preventDefault();
+      document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+});
+</script>
+
+</body>
+</html>
