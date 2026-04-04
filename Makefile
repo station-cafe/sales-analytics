@@ -10,6 +10,7 @@ analyze:
 
 render:
 	$(VENV) render.py
+	cp output/index.html docs/index.html
 
 all: fetch analyze render
 

@@ -824,25 +824,35 @@ def compute_staff_correlation(shifts_df, items_df, staff_names):
 
 
 def chart_staff_volume_correlation(daily_merged):
-    """Chart: staff count vs revenue scatter + labor hours bar."""
+    """Chart: total labor hours vs revenue scatter + revenue per labor hour trend."""
     if daily_merged is None or daily_merged.empty:
         return None
 
+    daily_merged = daily_merged.copy()
+    daily_merged["rev_per_hour"] = daily_merged["revenue"] / daily_merged["total_labor_hours"].clip(lower=0.1)
+
     fig = make_subplots(rows=1, cols=2,
-                        subplot_titles=("Staff Count vs Daily Revenue", "Revenue per Labor Hour"))
+                        subplot_titles=("Total Labor Hours vs Daily Revenue", "Revenue per Labor Hour (Trend)"))
 
     fig.add_trace(go.Scatter(
-        x=daily_merged["staff_count"],
+        x=daily_merged["total_labor_hours"],
         y=daily_merged["revenue"],
         mode="markers",
-        marker=dict(color=TERRACOTTA, size=10, opacity=0.6),
-        text=daily_merged["date"].dt.strftime("%b %d (%A)"),
-        hovertemplate="%{text}<br>Staff: %{x}<br>Revenue: $%{y:,.0f}<extra></extra>",
+        marker=dict(
+            color=daily_merged["staff_count"],
+            colorscale=[[0, GOLD], [1, TERRACOTTA]],
+            size=12,
+            opacity=0.7,
+            colorbar=dict(title="Staff #", x=0.45, len=0.5),
+        ),
+        text=daily_merged.apply(
+            lambda r: f"{r['date'].strftime('%b %d (%a)')}<br>{int(r['staff_count'])} staff, {r['total_labor_hours']:.1f} hrs",
+            axis=1
+        ),
+        hovertemplate="%{text}<br>Revenue: $%{y:,.0f}<extra></extra>",
     ), row=1, col=1)
 
-    # Revenue per labor hour by date
-    daily_merged = daily_merged.copy()
-    daily_merged["rev_per_hour"] = daily_merged["revenue"] / daily_merged["total_labor_hours"]
+    # Revenue per labor hour trend
     fig.add_trace(go.Bar(
         x=daily_merged["date"],
         y=daily_merged["rev_per_hour"],
@@ -858,55 +868,111 @@ def chart_staff_volume_correlation(daily_merged):
         showlegend=False,
         margin=dict(l=50, r=20, t=40, b=50),
     )
-    fig.update_xaxes(title_text="Staff on Duty", row=1, col=1)
+    fig.update_xaxes(title_text="Total Labor Hours", row=1, col=1)
     fig.update_yaxes(title_text="Revenue ($)", tickprefix="$", row=1, col=1)
     fig.update_yaxes(title_text="$/Labor Hour", tickprefix="$", row=1, col=2)
     return fig
 
 
-def chart_staff_shifts_timeline(shifts_df):
-    """Gantt-style chart showing who works when."""
+def chart_staff_coverage_heatmap(shifts_df):
+    """Heatmap showing staff count on duty by hour and date (last 14 days)."""
     if shifts_df.empty:
         return None
 
-    # Get most recent 14 days of shifts for readability
+    # Get most recent 14 days
     recent = shifts_df.sort_values("start_at", ascending=False)
     cutoff = recent["date"].iloc[0] - pd.Timedelta(days=14)
-    recent = recent[recent["date"] >= cutoff].sort_values("start_at")
+    recent = recent[recent["date"] >= cutoff]
 
-    fig = go.Figure()
-    staff_list = sorted(recent["staff_name"].unique())
-    colors = {name: PALETTE[i % len(PALETTE)] for i, name in enumerate(staff_list)}
-
+    # For each shift, mark which hours had this person on duty
+    hour_records = []
     for _, row in recent.iterrows():
-        fig.add_trace(go.Bar(
-            x=[(row["end_at"] - row["start_at"]).total_seconds() / 3600],
-            y=[row["date"].strftime("%b %d")],
-            base=[row["start_at"].hour + row["start_at"].minute / 60],
-            orientation="h",
-            marker_color=colors[row["staff_name"]],
-            name=row["staff_name"],
-            showlegend=False,
-            hovertemplate=f"{row['staff_name']}<br>{row['start_at'].strftime('%I:%M %p')} – {row['end_at'].strftime('%I:%M %p')}<br>{row['hours']:.1f} hrs<extra></extra>",
-        ))
+        start_h = row["start_at"].hour
+        end_h = row["end_at"].hour + (1 if row["end_at"].minute > 0 else 0)
+        date_str = row["date"].strftime("%b %d (%a)")
+        for h in range(start_h, min(end_h + 1, 22)):
+            hour_records.append({
+                "date": date_str,
+                "date_sort": row["date"],
+                "hour": h,
+                "staff": row["staff_name"],
+            })
 
-    # Add legend entries
-    for name, color in colors.items():
-        fig.add_trace(go.Bar(x=[0], y=[""], marker_color=color, name=name, showlegend=True))
+    if not hour_records:
+        return None
 
+    hr_df = pd.DataFrame(hour_records)
+
+    # Pivot: date x hour, value = staff count
+    pivot = hr_df.groupby(["date", "date_sort", "hour"])["staff"].nunique().reset_index()
+    pivot_wide = pivot.pivot(index=["date", "date_sort"], columns="hour", values="staff").fillna(0)
+    pivot_wide = pivot_wide.sort_index(level="date_sort")
+
+    # Build hover text with staff names
+    name_pivot = hr_df.groupby(["date", "hour"])["staff"].apply(lambda x: ", ".join(sorted(set(x)))).reset_index()
+    name_wide = name_pivot.pivot(index="date", columns="hour", values="staff").fillna("")
+
+    dates = [idx[0] for idx in pivot_wide.index]
+    hours = pivot_wide.columns.tolist()
+
+    hover_text = []
+    for d in dates:
+        row = []
+        for h in hours:
+            staff = name_wide.loc[d, h] if d in name_wide.index and h in name_wide.columns else ""
+            row.append(f"{d} {h}:00<br>{staff}" if staff else f"{d} {h}:00<br>No staff")
+        hover_text.append(row)
+
+    fig = go.Figure(go.Heatmap(
+        z=pivot_wide.values,
+        x=[f"{h}:00" for h in hours],
+        y=dates,
+        colorscale=[[0, "#f5f0eb"], [0.33, GOLD], [0.66, TERRACOTTA], [1, ESPRESSO]],
+        text=pivot_wide.values.astype(int),
+        texttemplate="%{text}",
+        textfont=dict(size=11),
+        hovertext=hover_text,
+        hovertemplate="%{hovertext}<extra></extra>",
+        colorbar=dict(title="Staff"),
+        zmin=0,
+        zmax=max(4, pivot_wide.values.max()),
+    ))
     fig.update_layout(
         template="plotly_white",
         plot_bgcolor=CREAM,
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(family="DM Sans"),
-        barmode="stack",
+        margin=dict(l=120, r=20, t=20, b=50),
         xaxis_title="Hour of Day",
-        xaxis=dict(range=[5, 20], dtick=2),
-        margin=dict(l=80, r=20, t=20, b=50),
-        legend=dict(orientation="h", y=-0.15),
-        height=max(300, len(recent["date"].unique()) * 35 + 100),
+        height=max(300, len(dates) * 30 + 100),
     )
     return fig
+
+
+def compute_staff_daily_roster(shifts_df):
+    """Build a table of who worked each day (last 14 days) for display."""
+    if shifts_df.empty:
+        return []
+
+    recent = shifts_df.sort_values("start_at", ascending=False)
+    cutoff = recent["date"].iloc[0] - pd.Timedelta(days=14)
+    recent = recent[recent["date"] >= cutoff].sort_values("start_at")
+
+    daily_roster = []
+    for date, group in recent.groupby("date"):
+        staff = []
+        for _, row in group.iterrows():
+            start_t = row["start_at"].strftime("%I:%M %p").lstrip("0")
+            end_t = row["end_at"].strftime("%I:%M %p").lstrip("0")
+            staff.append(f"{row['staff_name']} ({start_t}-{end_t})")
+        daily_roster.append({
+            "date": date.strftime("%b %d (%a)"),
+            "staff_count": group["team_member_id"].nunique(),
+            "total_hours": round(group["hours"].sum(), 1),
+            "roster": ", ".join(staff),
+        })
+
+    return list(reversed(daily_roster))
 
 
 # ── Main Analysis ───────────────────────────────────────────────────────
@@ -1120,9 +1186,31 @@ def main():
         if staff_corr_fig:
             results["charts"]["staff_volume_correlation"] = fig_to_json(staff_corr_fig)
     if not shifts_df.empty:
-        timeline_fig = chart_staff_shifts_timeline(shifts_df)
-        if timeline_fig:
-            results["charts"]["staff_shifts_timeline"] = fig_to_json(timeline_fig)
+        coverage_fig = chart_staff_coverage_heatmap(shifts_df)
+        if coverage_fig:
+            results["charts"]["staff_coverage_heatmap"] = fig_to_json(coverage_fig)
+        results["tables"]["staff_daily_roster"] = compute_staff_daily_roster(shifts_df)
+
+    # ── AOV anomaly detection ───────────────────────────────────��─────
+    # Flag days with AOV > 2x median (likely catering/gift card orders)
+    median_aov = daily["aov"].median()
+    outlier_days = daily[daily["aov"] > median_aov * 2].copy()
+    aov_outliers = []
+    for _, row in outlier_days.iterrows():
+        # Find the largest single order on that day
+        day_orders = [o for o in orders if pd.Timestamp(o["created_at"]).tz_convert("America/New_York").date() == row["date"].date()]
+        max_order = max(day_orders, key=lambda o: o.get("total_money", {}).get("amount", 0))
+        max_total = max_order.get("total_money", {}).get("amount", 0) / 100
+        items = [li.get("name", "Unknown") for li in max_order.get("line_items", [])]
+        aov_outliers.append({
+            "date": row["date"].strftime("%b %d (%A)"),
+            "aov": round(row["aov"], 2),
+            "revenue": round(row["revenue"], 2),
+            "orders": int(row["order_count"]),
+            "largest_order": round(max_total, 2),
+            "largest_order_items": items[:5],
+        })
+    results["tables"]["aov_outliers"] = aov_outliers
 
     # ── Startup period stats ────────────────────────────────────────────
     rampup = daily[daily["period"] == "Ramp-Up (Weeks 1-2)"]
