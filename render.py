@@ -64,7 +64,7 @@ def render_password_page(encrypted_data):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Station — Sales Analytics</title>
+<title>The Station - Sales Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -160,11 +160,14 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     const pwd = document.getElementById("pwd").value;
     try {
         const key = await deriveKey(pwd);
-        const decoded = atob(PAYLOAD);
-        let result = "";
-        for (let i = 0; i < decoded.length; i++) {
-            result += String.fromCharCode(decoded.charCodeAt(i) ^ key[i % key.length]);
+        // Decode base64 to raw bytes
+        const raw = atob(PAYLOAD);
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) {
+            bytes[i] = raw.charCodeAt(i) ^ key[i % key.length];
         }
+        // Decode XOR'd bytes as UTF-8
+        const result = new TextDecoder("utf-8").decode(bytes);
         if (result.includes("<!DOCTYPE") || result.includes("<html") || result.includes("<div")) {
             document.open();
             document.write(result);

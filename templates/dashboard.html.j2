@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <style>
-/* ── Reset & Base ─────────────────────────────────────────────── */
+/* -- Reset & Base ----------------------------------------------- */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
@@ -34,7 +34,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Navigation ───────────────────────────────────────────────── */
+/* -- Navigation ------------------------------------------------- */
 .nav {
   position: sticky;
   top: 0;
@@ -83,7 +83,7 @@ body {
   color: var(--terracotta);
 }
 
-/* ── Layout ───────────────────────────────────────────────────── */
+/* -- Layout ----------------------------------------------------- */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -96,7 +96,7 @@ section {
 }
 section:last-of-type { border-bottom: none; }
 
-/* ── Typography ───────────────────────────────────────────────── */
+/* -- Typography ------------------------------------------------- */
 h1, h2, h3 { font-family: 'Playfair Display', serif; }
 
 .page-header {
@@ -136,7 +136,7 @@ h3 {
   margin-top: 24px;
 }
 
-/* ── KPI Cards ────────────────────────────────────────────────── */
+/* -- KPI Cards -------------------------------------------------- */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -170,7 +170,7 @@ h3 {
   margin-top: 4px;
 }
 
-/* ── Chart Cards ──────────────────────────────────────────────── */
+/* -- Chart Cards ------------------------------------------------ */
 .chart-card {
   background: white;
   border-radius: 12px;
@@ -195,7 +195,7 @@ h3 {
   gap: 24px;
 }
 
-/* ── Insight Boxes ────────────────────────────────────────────── */
+/* -- Insight Boxes ---------------------------------------------- */
 .insight-box {
   background: white;
   border-radius: 12px;
@@ -222,7 +222,7 @@ h3 {
 .insight-box ul { padding-left: 20px; }
 .insight-box li { margin-bottom: 4px; }
 
-/* ── Tables ───────────────────────────────────────────────────── */
+/* -- Tables ----------------------------------------------------- */
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -245,7 +245,7 @@ h3 {
 .data-table tr:last-child td { border-bottom: none; }
 .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 
-/* ── Recommendation Cards ─────────────────────────────────────── */
+/* -- Recommendation Cards --------------------------------------- */
 .rec-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -289,7 +289,7 @@ h3 {
   color: var(--terracotta);
 }
 
-/* ── Footer ───────────────────────────────────────────────────── */
+/* -- Footer ----------------------------------------------------- */
 .footer {
   text-align: center;
   padding: 40px 0;
@@ -297,7 +297,7 @@ h3 {
   color: var(--slate);
 }
 
-/* ── Responsive ───────────────────────────────────────────────── */
+/* -- Responsive ------------------------------------------------- */
 @media (max-width: 768px) {
   .page-header h1 { font-size: 32px; }
   .page-header .subtitle { font-size: 16px; }
@@ -314,7 +314,7 @@ h3 {
   .kpi-grid { grid-template-columns: 1fr; }
 }
 
-/* ── Print ────────────────────────────────────────────────────── */
+/* -- Print ------------------------------------------------------ */
 @media print {
   .nav { display: none; }
   section { break-inside: avoid; padding: 24px 0; }
@@ -344,18 +344,18 @@ h3 {
 
 <div class="container" id="top">
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- HEADER -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <div class="page-header">
   <h1>The Station</h1>
   <p class="subtitle">Sales Analytics Dashboard</p>
   <p class="meta">{{ stats.date_range }} &middot; {{ generated_at }}</p>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- EXECUTIVE SUMMARY -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="summary">
   <div class="section-header">
     <h2>Executive Summary</h2>
@@ -447,9 +447,9 @@ h3 {
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- REVENUE TRENDS -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="revenue">
   <div class="section-header">
     <h2>Revenue Trends</h2>
@@ -530,9 +530,9 @@ h3 {
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- TIME PATTERNS -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="time">
   <div class="section-header">
     <h2>Time-of-Day Patterns</h2>
@@ -546,7 +546,7 @@ h3 {
 
   <div class="two-col">
     <div class="chart-card">
-      <h3>Morning Rush Detail (6–10 AM)</h3>
+      <h3>Morning Rush Detail (6-10 AM)</h3>
       <div class="chart-container" id="chart-morning-rush"></div>
     </div>
     <div class="chart-card">
@@ -566,9 +566,9 @@ h3 {
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- MENU PERFORMANCE -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="menu">
   <div class="section-header">
     <h2>Menu Performance</h2>
@@ -655,9 +655,9 @@ h3 {
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- WEATHER IMPACT -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="weather">
   <div class="section-header">
     <h2>Weather Impact</h2>
@@ -686,7 +686,7 @@ h3 {
       <div class="detail">Revenue change on rainy days</div>
     </div>
     <div class="kpi-card">
-      <div class="label">Temp–Revenue Correlation</div>
+      <div class="label">Temp-Revenue Correlation</div>
       <div class="value">{{ "{:.2f}".format(stats.weather.temp_correlation) }}</div>
       <div class="detail">{{ "Strong" if stats.weather.temp_correlation|abs > 0.5 else "Moderate" if stats.weather.temp_correlation|abs > 0.3 else "Weak" }} correlation</div>
     </div>
@@ -701,15 +701,15 @@ h3 {
       <li>Weather has a modest impact on sales -your customer base is relatively weather-resilient, likely driven by commuters and locals who come regardless.</li>
       {% endif %}
       <li>As spring arrives and temperatures rise, expect increased foot traffic from hikers and trail visitors. Prepare grab-and-go options for the outdoor crowd.</li>
-      <li>Tuxedo is a gateway to Harriman State Park and the Appalachian Trail -peak hiking season (April–October) should bring a noticeable bump in weekend traffic.</li>
-      <li>Consider a "hot soup" or "warm drink" push on cold/rainy days, and iced drink promotions when temps break 70°F.</li>
+      <li>Tuxedo is a gateway to Harriman State Park and the Appalachian Trail -peak hiking season (April-October) should bring a noticeable bump in weekend traffic.</li>
+      <li>Consider a "hot soup" or "warm drink" push on cold/rainy days, and iced drink promotions when temps break 70F.</li>
     </ul>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- TIPS -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="tips">
   <div class="section-header">
     <h2>Tips Analysis</h2>
@@ -744,9 +744,9 @@ h3 {
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- STAFFING -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="staffing">
   <div class="section-header">
     <h2>Staffing Recommendations</h2>
@@ -793,9 +793,9 @@ h3 {
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- STAFF CORRELATION -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="staff">
   <div class="section-header">
     <h2>Staff &amp; Volume Correlation</h2>
@@ -820,14 +820,14 @@ h3 {
     {% endif %}
     {% if stats.staffing_corr.staff_count_vs_revenue is defined %}
     <div class="kpi-card">
-      <div class="label">Staff Count ↔ Revenue</div>
+      <div class="label">Staff Count vs Revenue</div>
       <div class="value">{{ "{:.2f}".format(stats.staffing_corr.staff_count_vs_revenue) }}</div>
       <div class="detail">Correlation coefficient</div>
     </div>
     {% endif %}
     {% if stats.staffing_corr.labor_hours_vs_revenue is defined %}
     <div class="kpi-card">
-      <div class="label">Labor Hours ↔ Revenue</div>
+      <div class="label">Labor Hours vs Revenue</div>
       <div class="value">{{ "{:.2f}".format(stats.staffing_corr.labor_hours_vs_revenue) }}</div>
       <div class="detail">Correlation coefficient</div>
     </div>
@@ -922,9 +922,9 @@ h3 {
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- WHAT-IF ANALYSIS -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="whatif">
   <div class="section-header">
     <h2>What-If Scenarios</h2>
@@ -965,9 +965,9 @@ h3 {
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- LOCAL CONTEXT -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="local">
   <div class="section-header">
     <h2>Local Intelligence</h2>
@@ -982,19 +982,19 @@ h3 {
         <li><strong>Key traffic drivers:</strong> NJ Transit commuters, Harriman/Sterling Forest hikers, Appalachian Trail thru-hikers, Tuxedo Park gated community residents</li>
         <li><strong>NJ Transit:</strong> Port Jervis Line -~5-6 AM departures, returns 5-7 PM</li>
         <li><strong>Competition:</strong> Limited local cafe options -The Station has strong positioning as the primary specialty coffee destination</li>
-        <li><strong>Tourist season:</strong> April–October for hiking; fall foliage (Oct) is peak</li>
+        <li><strong>Tourist season:</strong> April-October for hiking; fall foliage (Oct) is peak</li>
         <li><strong>NY Sales Tax:</strong> 8.125% (Orange County)</li>
       </ul>
     </div>
     <div class="chart-card">
       <h3>Seasonal Calendar</h3>
       <ul style="font-size: 14px; line-height: 2; color: var(--warm-brown); padding-left: 16px;">
-        <li><strong>Mar–Apr:</strong> Spring hiking begins, trail opens up, increasing weekend foot traffic</li>
+        <li><strong>Mar-Apr:</strong> Spring hiking begins, trail opens up, increasing weekend foot traffic</li>
         <li><strong>May:</strong> Memorial Day weekend -first big tourism spike</li>
-        <li><strong>Jun–Aug:</strong> Peak summer, consistent hiker traffic, day-trippers from NYC/NJ</li>
-        <li><strong>Sep–Oct:</strong> Fall foliage season -highest tourism volume, Oktoberfest events</li>
-        <li><strong>Nov–Dec:</strong> Holiday season, reduced hiking, but local + commuter base stays</li>
-        <li><strong>Jan–Feb:</strong> Lowest traffic -focus on regulars, warm drinks, loyalty</li>
+        <li><strong>Jun-Aug:</strong> Peak summer, consistent hiker traffic, day-trippers from NYC/NJ</li>
+        <li><strong>Sep-Oct:</strong> Fall foliage season -highest tourism volume, Oktoberfest events</li>
+        <li><strong>Nov-Dec:</strong> Holiday season, reduced hiking, but local + commuter base stays</li>
+        <li><strong>Jan-Feb:</strong> Lowest traffic -focus on regulars, warm drinks, loyalty</li>
       </ul>
     </div>
   </div>
@@ -1003,16 +1003,16 @@ h3 {
     <h4>Local Opportunities</h4>
     <ul>
       <li><strong>Commuter lock-in:</strong> If morning spikes align with NJ Transit departures, these are your most reliable customers. A mobile pre-order option (even a simple text-to-order) could reduce wait time and increase capture rate.</li>
-      <li><strong>Hiker market:</strong> April–October brings trail traffic. Grab-and-go trail snacks, electrolyte drinks, and a "hiker special" could capture this segment. Consider a water bottle fill station as a goodwill gesture that drives foot traffic.</li>
+      <li><strong>Hiker market:</strong> April-October brings trail traffic. Grab-and-go trail snacks, electrolyte drinks, and a "hiker special" could capture this segment. Consider a water bottle fill station as a goodwill gesture that drives foot traffic.</li>
       <li><strong>Weekend events:</strong> Partner with local hiking groups, trail races, or Tuxedo Park community events for catering or pop-up specials.</li>
       <li><strong>Seasonal menu:</strong> Rotate specials with the seasons -iced drinks for summer hikers, pumpkin spice for fall foliage, peppermint for holidays. Your Signature Sips category is the natural home for these.</li>
     </ul>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- TOP RECOMMENDATIONS -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <section id="recs">
   <div class="section-header">
     <h2>Top Recommendations</h2>
@@ -1024,7 +1024,7 @@ h3 {
       <span class="rec-num">1</span>
       <h4>Launch a Simple Loyalty Program</h4>
       <p>Square Loyalty is already in your POS. Set up a points-per-dollar program with a free drink reward. Industry data shows 15-25% revenue lift for cafes. It also gives you data on visit frequency to identify your VIPs.</p>
-      <span class="impact">Est. +${{ "{:,.0f}".format(stats.what_if.loyalty_lift_low * 30) }}–{{ "{:,.0f}".format(stats.what_if.loyalty_lift_high * 30) }}/mo</span>
+      <span class="impact">Est. +${{ "{:,.0f}".format(stats.what_if.loyalty_lift_low * 30) }}-{{ "{:,.0f}".format(stats.what_if.loyalty_lift_high * 30) }}/mo</span>
     </div>
 
     <div class="rec-card">
@@ -1044,7 +1044,7 @@ h3 {
     <div class="rec-card">
       <span class="rec-num">4</span>
       <h4>Prep for Hiking Season</h4>
-      <p>April–October brings hikers to Tuxedo. Stock grab-and-go trail snacks, iced drinks, and consider a "Hiker's Pack" (coffee + snack + water). Add signage visible from the trail/station area.</p>
+      <p>April-October brings hikers to Tuxedo. Stock grab-and-go trail snacks, iced drinks, and consider a "Hiker's Pack" (coffee + snack + water). Add signage visible from the trail/station area.</p>
       <span class="impact">New customer segment capture</span>
     </div>
 
@@ -1065,9 +1065,9 @@ h3 {
   <p style="margin-top: 4px;">Data source: Square POS &middot; Weather: Open-Meteo</p>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <!-- PLOTLY CHART RENDERING -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ============================================================== -->
 <script>
 const A = {{ analysis }};
 const plotConfig = { responsive: true, displayModeBar: false };

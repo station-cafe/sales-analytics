@@ -466,7 +466,7 @@ def chart_weather_correlation(daily_weather):
             colorbar=dict(title="Precip (in)", x=0.45),
         ),
         text=daily_weather["date"].dt.strftime("%b %d (%A)"),
-        hovertemplate="%{text}<br>Temp: %{x:.0f}°F<br>Revenue: $%{y:,.0f}<extra></extra>",
+        hovertemplate="%{text}<br>Temp: %{x:.0f}F<br>Revenue: $%{y:,.0f}<extra></extra>",
     ), row=1, col=1)
 
     # Rain vs no rain box
@@ -483,7 +483,7 @@ def chart_weather_correlation(daily_weather):
         showlegend=False,
         margin=dict(l=50, r=20, t=40, b=50),
     )
-    fig.update_xaxes(title_text="Avg Temp (°F)", row=1, col=1)
+    fig.update_xaxes(title_text="Avg Temp (F)", row=1, col=1)
     fig.update_yaxes(title_text="Revenue ($)", tickprefix="$", row=1, col=1)
     fig.update_yaxes(title_text="Revenue ($)", tickprefix="$", row=1, col=2)
     return fig
@@ -586,7 +586,7 @@ def chart_morning_rush(items_df):
     for t in NJ_TRANSIT_AM:
         fig.add_annotation(
             x=t, y=1, yref="paper",
-            text=f"🚂 {t}", showarrow=True, arrowhead=2,
+            text=f"Train{t}", showarrow=True, arrowhead=2,
             ax=0, ay=-30, font=dict(size=9, color=SLATE),
         )
 
@@ -1080,7 +1080,7 @@ def main():
         "total_items_sold": int(items_df["quantity"].sum()),
         "avg_items_per_order": round(items_df.groupby("order_id")["quantity"].sum().mean(), 1),
         "n_days": n_days,
-        "date_range": f"{items_df['date'].min().strftime('%b %d')} – {items_df['date'].max().strftime('%b %d, %Y')}",
+        "date_range": f"{items_df['date'].min().strftime('%b %d')} - {items_df['date'].max().strftime('%b %d, %Y')}",
         "best_day_revenue": round(daily["revenue"].max(), 2),
         "best_day_date": daily.loc[daily["revenue"].idxmax(), "date"].strftime("%b %d (%A)"),
         "worst_day_revenue": round(daily["revenue"].min(), 2),
