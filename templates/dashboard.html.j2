@@ -336,6 +336,7 @@ h3 {
     <a href="#tips">Tips</a>
     <a href="#staffing">Staffing</a>
     <a href="#staff">Staff</a>
+    <a href="#employees">Employees</a>
     <a href="#whatif">What-If</a>
     <a href="#local">Local Intel</a>
     <a href="#recs">Recommendations</a>
@@ -923,6 +924,143 @@ h3 {
 </section>
 
 <!-- ============================================================== -->
+<!-- EMPLOYEE ANALYTICS -->
+<!-- ============================================================== -->
+<section id="employees">
+  <div class="section-header">
+    <h2>Employee Performance Profiles</h2>
+    <p class="section-desc">Correlative analysis of sales patterns during each team member's shifts. All metrics are normalized by concurrent staff count to control for team size.</p>
+  </div>
+
+  <div class="chart-card">
+    <h3>Performance Index - Normalized Revenue per Hour</h3>
+    <p style="font-size: 14px; color: var(--warm-brown); margin-bottom: 16px;">
+      Revenue per hour during each person's shifts, divided by concurrent staff count.
+      Green = above team average (PI > 100), terracotta = below average. Employees with 3+ shifts shown.
+    </p>
+    <div class="chart-container" id="chart-employee-performance"></div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Multi-Dimensional Comparison (5+ shifts)</h3>
+    <p style="font-size: 14px; color: var(--warm-brown); margin-bottom: 16px;">
+      Radar chart comparing employees across six dimensions. Larger area = stronger overall profile.
+      "Schedule Consistency" rewards regular, predictable start times.
+    </p>
+    <div class="chart-container" id="chart-employee-radar"></div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <h3>Performance by Day of Week</h3>
+      <p style="font-size: 14px; color: var(--warm-brown); margin-bottom: 12px;">
+        Normalized rev/hr by employee and day. Blank = didn't work that day. Helps identify who performs best on which days.
+      </p>
+      <div class="chart-container" id="chart-employee-dow-heatmap"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Shift Timing vs Performance</h3>
+      <p style="font-size: 14px; color: var(--warm-brown); margin-bottom: 12px;">
+        Each bubble is one shift. X = start time, Y = normalized rev/hr, size = shift length. Shows who thrives in which time slots.
+      </p>
+      <div class="chart-container" id="chart-employee-shift-patterns"></div>
+    </div>
+  </div>
+
+  {% if tables.employee_profiles is defined and tables.employee_profiles %}
+  <div class="chart-card">
+    <h3>Employee Profile Cards</h3>
+    <div style="overflow-x: auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Role</th>
+          <th class="num">Shifts</th>
+          <th class="num">Total Hrs</th>
+          <th class="num">Avg Shift</th>
+          <th class="num">Typical Hours</th>
+          <th class="num">Rev/Hr (Norm)</th>
+          <th class="num">Orders/Hr (Norm)</th>
+          <th class="num">AOV</th>
+          <th class="num">Food Attach</th>
+          <th class="num">PI</th>
+          <th>Primary Days</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in tables.employee_profiles %}
+        <tr>
+          <td><strong>{{ p.name }}</strong></td>
+          <td>{{ p.job_title }}</td>
+          <td class="num">{{ p.shifts }}</td>
+          <td class="num">{{ p.total_hours }}</td>
+          <td class="num">{{ p.avg_shift_length }}h</td>
+          <td class="num">{{ p.avg_start_time }}-{{ p.avg_end_time }}</td>
+          <td class="num">${{ "{:.2f}".format(p.avg_revenue_per_hour_norm) }}</td>
+          <td class="num">{{ p.avg_orders_per_hour_norm }}</td>
+          <td class="num">${{ "{:.2f}".format(p.avg_aov) }}</td>
+          <td class="num">{{ p.food_attach_rate }}%</td>
+          <td class="num" style="font-weight:700; color: {% if p.performance_index >= 100 %}var(--sage){% else %}var(--terracotta){% endif %}">
+            {{ p.performance_index|int }}
+          </td>
+          <td>{{ p.primary_days }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if tables.team_combinations is defined and tables.team_combinations %}
+  <div class="chart-card">
+    <h3>Team Combination Performance</h3>
+    <p style="font-size: 14px; color: var(--warm-brown); margin-bottom: 16px;">
+      How different team combinations perform. Only combos that have worked together 2+ days are shown.
+      Revenue per labor hour measures how efficiently the team converts labor into sales.
+    </p>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Team</th>
+          <th class="num">Size</th>
+          <th class="num">Days Together</th>
+          <th class="num">Avg Revenue</th>
+          <th class="num">Avg Orders</th>
+          <th class="num">Rev/Labor Hr</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tables.team_combinations %}
+        <tr>
+          <td>{{ t.team }}</td>
+          <td class="num">{{ t.team_size }}</td>
+          <td class="num">{{ t.days_together }}</td>
+          <td class="num">${{ "{:,.0f}".format(t.avg_revenue) }}</td>
+          <td class="num">{{ t.avg_orders }}</td>
+          <td class="num">${{ "{:.2f}".format(t.avg_rev_per_labor_hour) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="insight-box">
+    <h4>How to Read These Metrics</h4>
+    <ul>
+      <li><strong>Performance Index (PI):</strong> 100 = team average. A PI of 115 means 15% above average normalized revenue/hr during that person's shifts. Below 100 is below average. This is correlative - it includes day-of-week, time-of-day, and team effects.</li>
+      <li><strong>Normalized metrics:</strong> Raw revenue/hr divided by concurrent staff count. If 4 people are working and the shop does $100/hr, each person's normalized share is $25/hr. This controls for team size but not for role (barista vs kitchen).</li>
+      <li><strong>Food Attach Rate:</strong> % of orders during their shifts that include food items. Higher rates may reflect stronger upselling or may correlate with kitchen staff being on duty.</li>
+      <li><strong>Schedule Consistency:</strong> Low = always starts at the same time (reliable, predictable). High = variable start times. Neither is inherently better, but consistency helps with workflow and customer expectations.</li>
+      <li><strong>Team Combinations:</strong> Watch for combos with high rev/labor-hr. Certain pairings may produce better throughput, energy, or customer experience. Schedule your strongest combos for your busiest days.</li>
+      <li><strong>Barista vs Kitchen:</strong> Kitchen staff (Desiree, Frank, Zakiyya) often show higher normalized metrics because they work fewer, busier days. Compare within role groups, not across them.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================== -->
 <!-- WHAT-IF ANALYSIS -->
 <!-- ============================================================== -->
 <section id="whatif">
@@ -1095,6 +1233,10 @@ renderChart('chart-tips', 'tips');
 renderChart('chart-staffing-model', 'staffing_model');
 renderChart('chart-staff-volume-correlation', 'staff_volume_correlation');
 renderChart('chart-staff-coverage-heatmap', 'staff_coverage_heatmap');
+renderChart('chart-employee-performance', 'employee_performance');
+renderChart('chart-employee-radar', 'employee_radar');
+renderChart('chart-employee-dow-heatmap', 'employee_dow_heatmap');
+renderChart('chart-employee-shift-patterns', 'employee_shift_patterns');
 
 // Hide chart wrappers if no data
 if (!A.charts['staff_volume_correlation']) {

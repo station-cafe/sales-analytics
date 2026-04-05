@@ -975,7 +975,350 @@ def compute_staff_daily_roster(shifts_df):
     return list(reversed(daily_roster))
 
 
-# ── Main Analysis ───────────────────────────────────────────────────────
+# -- Employee Deep Analytics --------------------------------------------------
+
+def compute_employee_profiles(shifts_df, orders, staff_names):
+    """Build comprehensive per-employee performance profiles.
+
+    For each shift, find all orders that occurred during that window,
+    then normalize by concurrent staff to get a fair per-person metric.
+    """
+    import numpy as np
+
+    if shifts_df.empty:
+        return {}, [], []
+
+    # Build orders DataFrame with timestamps
+    order_rows = []
+    for o in orders:
+        if o.get("state") != "COMPLETED":
+            continue
+        created = pd.Timestamp(o["created_at"]).tz_convert("America/New_York")
+        total = o.get("total_money", {}).get("amount", 0) / 100
+        tip = o.get("total_tip_money", {}).get("amount", 0) / 100
+        n_items = len(o.get("line_items", []))
+        # Get category set from line items
+        cats = set()
+        for li in o.get("line_items", []):
+            cats.add(li.get("name", "Unknown"))
+        has_food = any(
+            li.get("name", "") in ["Breakfast Sandwich", "Avocado Toast", "The Station Waffles",
+                                    "Turkey, Gouda & Fig", "Proscuitto Pesto Mozz Sandwich",
+                                    "Half Sandwich + Soup Combo", "The Station Salad",
+                                    "Quiche", "Brown Sugar French Toast Bake", "Hummus Veggie Wrap",
+                                    "Pimento Cheese Sandwich", "Chicken Salad Sandwich"]
+            for li in o.get("line_items", [])
+        )
+        order_rows.append({
+            "ts": created,
+            "total": total,
+            "tip": tip,
+            "items": n_items,
+            "has_food": has_food,
+        })
+    orders_ts = pd.DataFrame(order_rows).sort_values("ts")
+
+    # For each shift, compute metrics
+    shift_rows = []
+    for _, shift in shifts_df.iterrows():
+        # Orders during this shift
+        mask = (orders_ts["ts"] >= shift["start_at"]) & (orders_ts["ts"] <= shift["end_at"])
+        during = orders_ts[mask]
+
+        # Count concurrent staff on this date
+        same_day = shifts_df[shifts_df["date"] == shift["date"]]
+        concurrent = len(same_day)
+
+        n_orders = len(during)
+        revenue = during["total"].sum()
+        tips = during["tip"].sum()
+        items = during["items"].sum()
+
+        shift_rows.append({
+            "name": shift["staff_name"],
+            "team_member_id": shift["team_member_id"],
+            "date": shift["date"],
+            "weekday": shift["start_at"].day_name(),
+            "weekday_num": shift["start_at"].dayofweek,
+            "start_hour": shift["start_at"].hour + shift["start_at"].minute / 60,
+            "end_hour": shift["end_at"].hour + shift["end_at"].minute / 60,
+            "hours": shift["hours"],
+            "job_title": shift["job_title"],
+            "hourly_rate": shift["hourly_rate"],
+            "concurrent_staff": concurrent,
+            "orders_during": n_orders,
+            "revenue_during": revenue,
+            "tips_during": tips,
+            "items_during": items,
+            "food_orders": during["has_food"].sum() if n_orders > 0 else 0,
+            "orders_per_hour": n_orders / shift["hours"] if shift["hours"] > 0 else 0,
+            "revenue_per_hour": revenue / shift["hours"] if shift["hours"] > 0 else 0,
+            "adj_revenue_per_hour": (revenue / shift["hours"]) / concurrent if shift["hours"] > 0 and concurrent > 0 else 0,
+            "adj_orders_per_hour": (n_orders / shift["hours"]) / concurrent if shift["hours"] > 0 and concurrent > 0 else 0,
+            "aov": revenue / n_orders if n_orders > 0 else 0,
+        })
+
+    sm = pd.DataFrame(shift_rows)
+
+    # -- Employee profiles --
+    profiles = []
+    for name, g in sm.groupby("name"):
+        tmid = g.iloc[0]["team_member_id"]
+        job = g.iloc[0]["job_title"]
+
+        # Day-of-week distribution
+        dow_counts = g["weekday"].value_counts().to_dict()
+        # Shift time pattern
+        avg_start = g["start_hour"].mean()
+        avg_end = g["end_hour"].mean()
+        # Consistency: std dev of start times
+        start_consistency = g["start_hour"].std() if len(g) > 1 else 0
+
+        # Performance index: this employee's avg adj_rev/hr vs overall avg
+        overall_avg = sm["adj_revenue_per_hour"].mean()
+        emp_avg = g["adj_revenue_per_hour"].mean()
+        performance_index = (emp_avg / overall_avg * 100) if overall_avg > 0 else 100
+
+        profiles.append({
+            "name": name,
+            "job_title": job,
+            "shifts": len(g),
+            "total_hours": round(g["hours"].sum(), 1),
+            "avg_shift_length": round(g["hours"].mean(), 1),
+            "shift_length_std": round(g["hours"].std(), 1) if len(g) > 1 else 0,
+            "avg_start_time": f"{int(avg_start)}:{int((avg_start % 1) * 60):02d}",
+            "avg_end_time": f"{int(avg_end)}:{int((avg_end % 1) * 60):02d}",
+            "schedule_consistency": round(start_consistency, 1),
+            "avg_concurrent_staff": round(g["concurrent_staff"].mean(), 1),
+            # Raw metrics (total during shift, shared with team)
+            "avg_orders_per_hour_raw": round(g["orders_per_hour"].mean(), 1),
+            "avg_revenue_per_hour_raw": round(g["revenue_per_hour"].mean(), 2),
+            # Normalized by concurrent staff
+            "avg_orders_per_hour_norm": round(g["adj_orders_per_hour"].mean(), 2),
+            "avg_revenue_per_hour_norm": round(g["adj_revenue_per_hour"].mean(), 2),
+            # AOV during shifts
+            "avg_aov": round(g[g["orders_during"] > 0]["aov"].mean(), 2) if (g["orders_during"] > 0).any() else 0,
+            # Food attach
+            "food_attach_rate": round(
+                g["food_orders"].sum() / g["orders_during"].sum() * 100, 1
+            ) if g["orders_during"].sum() > 0 else 0,
+            # Performance index (100 = average)
+            "performance_index": round(performance_index, 0),
+            # Day-of-week they typically work
+            "primary_days": ", ".join(
+                sorted(dow_counts.keys(), key=lambda d: dow_counts[d], reverse=True)[:3]
+            ),
+            "hourly_rate": g.iloc[0]["hourly_rate"],
+            # Revenue per labor dollar
+            "revenue_per_labor_dollar": round(
+                g["revenue_during"].sum() / (g["hours"].sum() * g.iloc[0]["hourly_rate"]), 2
+            ) if g.iloc[0]["hourly_rate"] > 0 and g["hours"].sum() > 0 else 0,
+        })
+
+    profiles.sort(key=lambda p: p["performance_index"], reverse=True)
+
+    # -- Team combination analysis --
+    # For each date, build the team and compute metrics
+    daily_teams = sm.groupby("date").agg(
+        team=("name", lambda x: tuple(sorted(set(x)))),
+        team_size=("name", "nunique"),
+        total_hours=("hours", "sum"),
+        revenue=("revenue_during", "first"),  # Same for all on same day
+        orders=("orders_during", "first"),
+    ).reset_index()
+
+    # Group by team composition
+    team_perf = []
+    for team, g in daily_teams.groupby("team"):
+        if len(g) < 2:  # Need at least 2 occurrences
+            continue
+        team_perf.append({
+            "team": ", ".join(team),
+            "team_size": g.iloc[0]["team_size"],
+            "days_together": len(g),
+            "avg_revenue": round(g["revenue"].mean(), 2),
+            "avg_orders": round(g["orders"].mean(), 1),
+            "avg_rev_per_labor_hour": round(
+                g["revenue"].sum() / g["total_hours"].sum(), 2
+            ) if g["total_hours"].sum() > 0 else 0,
+        })
+    team_perf.sort(key=lambda t: t["avg_rev_per_labor_hour"], reverse=True)
+
+    return sm, profiles, team_perf
+
+
+def chart_employee_radar(profiles):
+    """Radar chart comparing employee performance across multiple dimensions."""
+    if not profiles:
+        return None
+
+    # Normalize metrics to 0-100 scale
+    metrics = ["avg_revenue_per_hour_norm", "avg_orders_per_hour_norm", "avg_aov",
+               "food_attach_rate", "avg_shift_length", "schedule_consistency"]
+    labels = ["Rev/Hr (Norm)", "Orders/Hr (Norm)", "Avg Order Value",
+              "Food Attach %", "Shift Length", "Schedule Consistency"]
+
+    # Only include employees with 5+ shifts for meaningful comparison
+    active = [p for p in profiles if p["shifts"] >= 5]
+    if len(active) < 2:
+        return None
+
+    # Normalize each metric to 0-100
+    import numpy as np
+    vals = {}
+    for m in metrics:
+        raw = [p[m] for p in active]
+        mn, mx = min(raw), max(raw)
+        rng = mx - mn if mx != mn else 1
+        # Invert schedule_consistency (lower is better)
+        if m == "schedule_consistency":
+            vals[m] = [100 - ((v - mn) / rng * 100) for v in raw]
+        else:
+            vals[m] = [(v - mn) / rng * 100 for v in raw]
+
+    fig = go.Figure()
+    for i, p in enumerate(active):
+        r = [vals[m][i] for m in metrics]
+        r.append(r[0])  # Close the polygon
+        fig.add_trace(go.Scatterpolar(
+            r=r,
+            theta=labels + [labels[0]],
+            fill="toself",
+            name=p["name"],
+            line=dict(color=PALETTE[i % len(PALETTE)]),
+            opacity=0.6,
+        ))
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 100], showticklabels=False),
+            bgcolor=CREAM,
+        ),
+        template="plotly_white",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="DM Sans"),
+        legend=dict(orientation="h", y=-0.15),
+        margin=dict(l=60, r=60, t=40, b=60),
+    )
+    return fig
+
+
+def chart_employee_performance_bars(profiles):
+    """Horizontal bar chart: normalized revenue per hour by employee."""
+    active = [p for p in profiles if p["shifts"] >= 3]
+    if not active:
+        return None
+
+    names = [p["name"] for p in active]
+    rev = [p["avg_revenue_per_hour_norm"] for p in active]
+    idx = [p["performance_index"] for p in active]
+
+    colors = [SAGE if i >= 100 else TERRACOTTA for i in idx]
+
+    fig = go.Figure(go.Bar(
+        x=rev,
+        y=names,
+        orientation="h",
+        marker_color=colors,
+        text=[f"${r:.2f}/hr (PI: {int(i)})" for r, i in zip(rev, idx)],
+        textposition="auto",
+    ))
+    fig.update_layout(
+        template="plotly_white",
+        plot_bgcolor=CREAM,
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="DM Sans"),
+        xaxis_title="Normalized Revenue per Hour ($)",
+        xaxis_tickprefix="$",
+        margin=dict(l=100, r=20, t=20, b=50),
+    )
+    return fig
+
+
+def chart_employee_shift_patterns(shift_metrics_df):
+    """Bubble chart: shift start time vs. normalized rev/hr, size=shift length."""
+    if shift_metrics_df.empty:
+        return None
+
+    # Only employees with meaningful data
+    active_names = shift_metrics_df.groupby("name").filter(lambda x: len(x) >= 3)["name"].unique()
+    df = shift_metrics_df[shift_metrics_df["name"].isin(active_names)].copy()
+
+    fig = go.Figure()
+    for i, name in enumerate(sorted(df["name"].unique())):
+        emp = df[df["name"] == name]
+        fig.add_trace(go.Scatter(
+            x=emp["start_hour"],
+            y=emp["adj_revenue_per_hour"],
+            mode="markers",
+            name=name,
+            marker=dict(
+                size=emp["hours"] * 5,
+                color=PALETTE[i % len(PALETTE)],
+                opacity=0.6,
+                sizemin=4,
+            ),
+            text=emp.apply(
+                lambda r: f"{r['name']}<br>{r['date']:%b %d} ({r['weekday']})<br>"
+                          f"Shift: {r['hours']:.1f}h, Staff: {int(r['concurrent_staff'])}<br>"
+                          f"Rev/hr (norm): ${r['adj_revenue_per_hour']:.2f}",
+                axis=1
+            ),
+            hovertemplate="%{text}<extra></extra>",
+        ))
+
+    fig.update_layout(
+        template="plotly_white",
+        plot_bgcolor=CREAM,
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="DM Sans"),
+        xaxis_title="Shift Start Time",
+        xaxis=dict(dtick=1, tickvals=list(range(6, 18)),
+                   ticktext=[f"{h}:00" for h in range(6, 18)]),
+        yaxis_title="Normalized Rev/Hr ($)",
+        yaxis_tickprefix="$",
+        legend=dict(orientation="h", y=-0.15),
+        margin=dict(l=60, r=20, t=20, b=80),
+    )
+    return fig
+
+
+def chart_employee_dow_heatmap(shift_metrics_df):
+    """Heatmap: employee x day-of-week showing normalized revenue/hr."""
+    if shift_metrics_df.empty:
+        return None
+
+    active_names = shift_metrics_df.groupby("name").filter(lambda x: len(x) >= 3)["name"].unique()
+    df = shift_metrics_df[shift_metrics_df["name"].isin(active_names)]
+
+    dow_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    pivot = df.groupby(["name", "weekday"])["adj_revenue_per_hour"].mean().reset_index()
+    pivot_wide = pivot.pivot(index="name", columns="weekday", values="adj_revenue_per_hour")
+    pivot_wide = pivot_wide.reindex(columns=dow_order).fillna(0)
+
+    fig = go.Figure(go.Heatmap(
+        z=pivot_wide.values,
+        x=[d[:3] for d in dow_order],
+        y=pivot_wide.index,
+        colorscale=[[0, "#f5f0eb"], [0.5, GOLD], [1, TERRACOTTA]],
+        text=pivot_wide.values.round(1),
+        texttemplate="$%{text}",
+        textfont=dict(size=11),
+        hovertemplate="%{y} on %{x}<br>Norm Rev/Hr: $%{z:.2f}<extra></extra>",
+        colorbar=dict(title="$/hr"),
+    ))
+    fig.update_layout(
+        template="plotly_white",
+        plot_bgcolor=CREAM,
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="DM Sans"),
+        margin=dict(l=100, r=20, t=20, b=50),
+        xaxis_title="Day of Week",
+    )
+    return fig
+
+
+# -- Main Analysis ------------------------------------------------------------
 
 def main():
     print("Loading data...")
@@ -1190,6 +1533,31 @@ def main():
         if coverage_fig:
             results["charts"]["staff_coverage_heatmap"] = fig_to_json(coverage_fig)
         results["tables"]["staff_daily_roster"] = compute_staff_daily_roster(shifts_df)
+
+    # -- Employee deep analytics --
+    if not shifts_df.empty:
+        print("  Computing employee profiles...")
+        shift_metrics_df, emp_profiles, team_combos = compute_employee_profiles(
+            shifts_df, orders, staff_names
+        )
+        results["tables"]["employee_profiles"] = emp_profiles
+        results["tables"]["team_combinations"] = team_combos[:10]
+
+        radar_fig = chart_employee_radar(emp_profiles)
+        if radar_fig:
+            results["charts"]["employee_radar"] = fig_to_json(radar_fig)
+
+        perf_fig = chart_employee_performance_bars(emp_profiles)
+        if perf_fig:
+            results["charts"]["employee_performance"] = fig_to_json(perf_fig)
+
+        pattern_fig = chart_employee_shift_patterns(shift_metrics_df)
+        if pattern_fig:
+            results["charts"]["employee_shift_patterns"] = fig_to_json(pattern_fig)
+
+        dow_fig = chart_employee_dow_heatmap(shift_metrics_df)
+        if dow_fig:
+            results["charts"]["employee_dow_heatmap"] = fig_to_json(dow_fig)
 
     # ── AOV anomaly detection ───────────────────────────────────��─────
     # Flag days with AOV > 2x median (likely catering/gift card orders)
