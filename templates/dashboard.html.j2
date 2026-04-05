@@ -990,6 +990,7 @@ h3 {
       </thead>
       <tbody>
         {% for p in tables.employee_profiles %}
+        {% if not p.is_former %}
         <tr>
           <td><strong>{{ p.name }}</strong></td>
           <td>{{ p.job_title }}</td>
@@ -1006,6 +1007,7 @@ h3 {
           </td>
           <td>{{ p.primary_days }}</td>
         </tr>
+        {% endif %}
         {% endfor %}
       </tbody>
     </table>
@@ -1055,7 +1057,7 @@ h3 {
       <li><strong>Food Attach Rate:</strong> % of orders during their shifts that include food items. Higher rates may reflect stronger upselling or may correlate with kitchen staff being on duty.</li>
       <li><strong>Schedule Consistency:</strong> Low = always starts at the same time (reliable, predictable). High = variable start times. Neither is inherently better, but consistency helps with workflow and customer expectations.</li>
       <li><strong>Team Combinations:</strong> Watch for combos with high rev/labor-hr. Certain pairings may produce better throughput, energy, or customer experience. Schedule your strongest combos for your busiest days.</li>
-      <li><strong>Barista vs Kitchen:</strong> Kitchen staff (Desiree, Frank, Zakiyya) often show higher normalized metrics because they work fewer, busier days. Compare within role groups, not across them.</li>
+      <li><strong>Role effects:</strong> Kitchen staff often show higher normalized metrics because they work fewer, busier days. Compare within role groups, not across them. Former employees are excluded from individual reporting but their data is included in baselines.</li>
     </ul>
   </div>
 </section>

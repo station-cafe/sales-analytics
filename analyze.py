@@ -25,6 +25,9 @@ OUTPUT = Path(__file__).parent / "analysis.json"
 STATION_MENU_ID = "7SZUNIBCQEUANKT7GB3R6JXW"
 OPEN_DATE = "2026-02-22"
 
+# Former employees: include in baselines/normalization, exclude from top-line reporting
+FORMER_EMPLOYEES = {"Maria", "Desiree", "Frank"}
+
 # Brand colors
 CREAM = "#faf7f2"
 ESPRESSO = "#2c1810"
@@ -1115,6 +1118,10 @@ def compute_employee_profiles(shifts_df, orders, staff_names):
             ) if g.iloc[0]["hourly_rate"] > 0 and g["hours"].sum() > 0 else 0,
         })
 
+    # Tag former employees
+    for p in profiles:
+        p["is_former"] = p["name"] in FORMER_EMPLOYEES
+
     profiles.sort(key=lambda p: p["performance_index"], reverse=True)
 
     # -- Team combination analysis --
@@ -1158,8 +1165,8 @@ def chart_employee_radar(profiles):
     labels = ["Rev/Hr (Norm)", "Orders/Hr (Norm)", "Avg Order Value",
               "Food Attach %", "Shift Length", "Schedule Consistency"]
 
-    # Only include employees with 5+ shifts for meaningful comparison
-    active = [p for p in profiles if p["shifts"] >= 5]
+    # Only include current employees with 5+ shifts for meaningful comparison
+    active = [p for p in profiles if p["shifts"] >= 5 and not p.get("is_former")]
     if len(active) < 2:
         return None
 
@@ -1205,7 +1212,8 @@ def chart_employee_radar(profiles):
 
 def chart_employee_performance_bars(profiles):
     """Horizontal bar chart: normalized revenue per hour by employee."""
-    active = [p for p in profiles if p["shifts"] >= 3]
+    # Only current employees with 3+ shifts
+    active = [p for p in profiles if p["shifts"] >= 3 and not p.get("is_former")]
     if not active:
         return None
 
@@ -1240,8 +1248,10 @@ def chart_employee_shift_patterns(shift_metrics_df):
     if shift_metrics_df.empty:
         return None
 
-    # Only employees with meaningful data
-    active_names = shift_metrics_df.groupby("name").filter(lambda x: len(x) >= 3)["name"].unique()
+    # Only current employees with meaningful data
+    active_names = shift_metrics_df[
+        ~shift_metrics_df["name"].isin(FORMER_EMPLOYEES)
+    ].groupby("name").filter(lambda x: len(x) >= 3)["name"].unique()
     df = shift_metrics_df[shift_metrics_df["name"].isin(active_names)].copy()
 
     fig = go.Figure()
@@ -1288,7 +1298,9 @@ def chart_employee_dow_heatmap(shift_metrics_df):
     if shift_metrics_df.empty:
         return None
 
-    active_names = shift_metrics_df.groupby("name").filter(lambda x: len(x) >= 3)["name"].unique()
+    active_names = shift_metrics_df[
+        ~shift_metrics_df["name"].isin(FORMER_EMPLOYEES)
+    ].groupby("name").filter(lambda x: len(x) >= 3)["name"].unique()
     df = shift_metrics_df[shift_metrics_df["name"].isin(active_names)]
 
     dow_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
